@@ -16,8 +16,8 @@ Each directory has a well-defined, single responsibility to ensure clarity and m
 Clone the repository and install core dependencies (Python 3.10+ is required):
 ```bash
 # Clone the repo
-git clone <Your Repository HTTPS/SSH Link>
-cd ai-system-engineering-project
+git clone https://github.com/liu83161bo-svg/Software-Engineering-Tools-Homework.git
+cd Software-Engineering-Tools-Homework
 
 # Install core dependencies
 pip install -r requirements.txt
