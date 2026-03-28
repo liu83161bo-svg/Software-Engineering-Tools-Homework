@@ -27,9 +27,9 @@
     4.  Open-source Researcher SDK with core model and XAI modules.
 
 *   **Non-Goals:**
-    *   ❌ **Not an autonomous diagnostic device.**
-    *   ❌ **Not a real-time monitor or consumer product.**
-    *   ❌ **Not a general-purpose EEG analysis software.**
+    *    **Not an autonomous diagnostic device.**
+    *    **Not a real-time monitor or consumer product.**
+    *    **Not a general-purpose EEG analysis software.**
 
 ### **3. KPIs & Constraints**
 
