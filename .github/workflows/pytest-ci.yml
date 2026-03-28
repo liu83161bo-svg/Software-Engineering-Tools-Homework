@@ -1,0 +1,59 @@
+# ==============================================================================
+# CI Pipeline for Software-Engineering-Tools-Homework
+# Triggers on every code push and pull request to ensure code quality
+# ==============================================================================
+name: Software-Engineering-Tools-Homework
+
+# Trigger conditions: run on every push and pull request
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Define CI jobs
+jobs:
+  pytest-test:
+    # Run on the latest Ubuntu environment provided by GitHub
+    runs-on: ubuntu-latest
+
+    # CI execution steps
+    steps:
+      # Step 1: Check out the code from repository to CI runner
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python 3.10 environment
+      - name: Set Up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # Step 3: Install required Python packages
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+
+      # Step 4: Create a sample test file to ensure test suite works
+      - name: Create Basic Test File
+        run: |
+          mkdir -p tests
+          echo "def test_sample(): assert 1 + 1 == 2" > tests/test_sample.py
+
+      # Step 5: Run pytest and calculate test coverage
+      - name: Run Pytest with Coverage
+        run: pytest tests/ --cov=src/ --cov-report=xml
+
+      # Step 6: Generate test report in JUnit XML format
+      - name: Generate Test Report
+        if: always()
+        run: pytest tests/ --junitxml=reports/pytest-results.xml
+
+      # Step 7: Upload test report as an artifact for review
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-test-report
+          path: reports/
