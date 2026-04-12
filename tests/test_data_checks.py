@@ -11,9 +11,9 @@ from pathlib import Path
 class TestDataQuality:
     """Data quality test suite for EEG age classification dataset"""
 
-    DATA_PATH = Path("data/sample_eeg_data.csv")
-    JSONL_PATH = Path("data/sample_eeg_data.jsonl")
-    SPLITS_DIR = Path("data/splits")
+    DATA_PATH = "./data/sample_eeg_data.csv"
+    JSONL_PATH = "./data/sample_eeg_data.jsonl"
+    SPLITS_DIR = "./data/splits"
     REQUIRED_COLUMNS = ['trial_id', 'subject_hash', 'trial_index', 'age']
     AGE_RANGE = (0, 100)
 
