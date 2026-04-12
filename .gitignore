@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+echo "# DVC tracked files" >> .gitignore
+echo "data/sample_eeg_data.csv" >> .gitignore
+echo "data/sample_eeg_data.jsonl" >> .gitignore
+echo ".dvc/remote/" >> .gitignore
