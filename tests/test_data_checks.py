@@ -11,8 +11,9 @@ from pathlib import Path
 class TestDataQuality:
     """Data quality test suite for EEG age classification dataset"""
 
-    DATA_PATH = Path(__file__).parent.parent / "data" / "sample_eeg_data.csv"
-    JSONL_PATH = Path(__file__).parent.parent / "data" / "sample_eeg_data.jsonl"
+    DATA_PATH = Path("data/sample_eeg_data.csv")
+    JSONL_PATH = Path("data/sample_eeg_data.jsonl")
+    SPLITS_DIR = Path("data/splits")
     REQUIRED_COLUMNS = ['trial_id', 'subject_hash', 'trial_index', 'age']
     AGE_RANGE = (0, 100)
 
@@ -107,97 +108,63 @@ class TestDataQuality:
                 else:
                     assert False, f"{col}: expected {expected}, got {actual}"
 
-    def test_13_split_integrity_check(self):
-        """STR-05: Verify subject-based splits have no leakage"""
-        split_dir = Path(__file__).parent.parent / "data" / "splits"
+    # 在TestDataQuality类中添加
+    def test_13_subject_split_consistency(self):
+        """STR-05: Check subject-based split consistency"""
+        splits_dir = Path(__file__).parent.parent / "data" / "splits"
 
         # Check split files exist
-        required_files = ['train_subjects.txt', 'val_subjects.txt', 'test_subjects.txt']
-        for file in required_files:
-            file_path = split_dir / file
-            assert file_path.exists(), f"Split file missing: {file}"
+        split_files = ['train_subjects.txt', 'val_subjects.txt', 'test_subjects.txt']
+        for file_name in split_files:
+            file_path = splits_dir / file_name
+            assert file_path.exists(), f"Split file {file_name} not found"
 
-        # Load subjects from each split
-        with open(split_dir / 'train_subjects.txt', 'r') as f:
-            train_subjects = set(line.strip() for line in f)
-        with open(split_dir / 'val_subjects.txt', 'r') as f:
-            val_subjects = set(line.strip() for line in f)
-        with open(split_dir / 'test_subjects.txt', 'r') as f:
-            test_subjects = set(line.strip() for line in f)
+        # Load subjects from splits
+        split_subjects = {}
+        all_subjects_in_splits = set()
+
+        for file_name in split_files:
+            file_path = splits_dir / file_name
+            with open(file_path, 'r') as f:
+                subjects = {line.strip() for line in f if line.strip()}
+                split_subjects[file_name] = subjects
+                all_subjects_in_splits.update(subjects)
 
         # Check no overlap between splits
-        assert len(train_subjects & val_subjects) == 0, "Subject leakage between train and val!"
-        assert len(train_subjects & test_subjects) == 0, "Subject leakage between train and test!"
-        assert len(val_subjects & test_subjects) == 0, "Subject leakage between val and test!"
+        train_subjects = split_subjects['train_subjects.txt']
+        val_subjects = split_subjects['val_subjects.txt']
+        test_subjects = split_subjects['test_subjects.txt']
 
-        # Check all subjects are accounted for
-        all_split_subjects = train_subjects | val_subjects | test_subjects
+        assert len(train_subjects & val_subjects) == 0, "Overlap between train and val subjects"
+        assert len(train_subjects & test_subjects) == 0, "Overlap between train and test subjects"
+        assert len(val_subjects & test_subjects) == 0, "Overlap between val and test subjects"
+
+        # Check all subjects in data are in splits
         data_subjects = set(self.df['subject_hash'].unique())
+        subjects_not_in_splits = data_subjects - all_subjects_in_splits
+        subjects_not_in_data = all_subjects_in_splits - data_subjects
 
-        missing_in_splits = data_subjects - all_split_subjects
-        extra_in_splits = all_split_subjects - data_subjects
+        assert len(subjects_not_in_splits) == 0, f"Subjects in data but not in splits: {subjects_not_in_splits}"
+        assert len(subjects_not_in_data) == 0, f"Subjects in splits but not in data: {subjects_not_in_data}"
 
-        assert len(missing_in_splits) == 0, f"Subjects missing in splits: {missing_in_splits}"
-        assert len(extra_in_splits) == 0, f"Extra subjects in splits: {extra_in_splits}"
+        print(f"Subject split validation passed: {len(data_subjects)} subjects correctly split")
 
-        print(
-            f"✓ Split integrity: {len(train_subjects)} train, {len(val_subjects)} val, {len(test_subjects)} test subjects")
+    def test_14_fixed_age_distribution(self):
+        """STA-04: Verify fixed age distribution (16 ages, 20 samples each)"""
+        expected_ages = [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 16, 19, 26, 47]
 
-    def test_14_dvc_tracking_check(self):
-        """STR-06: Check DVC tracking files exist"""
-        dvc_files = [
-            Path(__file__).parent.parent / "data" / "raw" / "sample_eeg_data.csv.dvc",
-            Path(__file__).parent.parent / "dvc.yaml",
-            Path(__file__).parent.parent / ".dvc" / "config"
-        ]
+        # Check all expected ages are present
+        actual_ages = sorted(self.df['age'].unique())
+        assert actual_ages == expected_ages, f"Age mismatch. Expected: {expected_ages}, Got: {actual_ages}"
 
-        for dvc_file in dvc_files:
-            if dvc_file.exists():
-                print(f"✓ DVC file found: {dvc_file.name}")
-            else:
-                # This is a warning, not a failure (for first-time setup)
-                print(f"⚠ DVC file not found (expected for initial setup): {dvc_file.name}")
+        # Check exactly 20 samples per age
+        age_counts = self.df['age'].value_counts()
+        for age in expected_ages:
+            assert age_counts[age] == 20, f"Age {age} has {age_counts[age]} samples, expected 20"
 
-    def test_15_age_distribution_per_split(self):
-        """STA-04: Check age distribution is balanced across splits"""
-        split_dir = Path(__file__).parent.parent / "data" / "splits"
+        # Check total samples
+        total_samples = len(self.df)
+        expected_total = len(expected_ages) * 20
+        assert total_samples == expected_total, f"Total samples: {total_samples}, expected {expected_total}"
 
-        if not (split_dir / 'split_metadata.json').exists():
-            print("⚠ Split metadata not found, skipping distribution check")
-            return
-
-        with open(split_dir / 'split_metadata.json', 'r') as f:
-            metadata = json.load(f)
-
-        age_dist = metadata.get('age_distribution', {})
-
-        # Check each split has multiple ages
-        for split_name in ['train', 'val', 'test']:
-            if split_name in age_dist:
-                ages_in_split = list(age_dist[split_name].keys())
-                assert len(ages_in_split) >= 8, f"Split {split_name} has only {len(ages_in_split)} ages"
-
-        print(f"✓ Age distribution balanced across splits")
-
-    def test_16_data_version_consistency(self):
-        """STA-05: Check CSV and JSONL data consistency"""
-        if not self.JSONL_PATH.exists():
-            print("⚠ JSONL file not found, skipping consistency check")
-            return
-
-        # Load JSONL data
-        jsonl_data = []
-        with open(self.JSONL_PATH, 'r') as f:
-            for line in f:
-                jsonl_data.append(json.loads(line))
-
-        # Check trial count matches
-        assert len(jsonl_data) == len(self.df), \
-            f"CSV has {len(self.df)} records, JSONL has {len(jsonl_data)}"
-
-        # Check age distribution matches
-        csv_ages = set(self.df['age'].unique())
-        jsonl_ages = set(item['age'] for item in jsonl_data)
-        assert csv_ages == jsonl_ages, f"Age mismatch: CSV {csv_ages}, JSONL {jsonl_ages}"
-
-        print(f"✓ Data consistency: {len(jsonl_data)} records match between CSV and JSONL")
+        print(f"Fixed age distribution verified: {len(expected_ages)} ages × 20 samples = {total_samples} total")

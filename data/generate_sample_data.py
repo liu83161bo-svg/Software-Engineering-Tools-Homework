@@ -1,160 +1,108 @@
-"""
-EEG Sample Data Generator for AI System Course
-Generates synthetic EEG data with fixed age distribution
-Each age: 20 trials, total 320 trials (16 ages × 20)
-"""
-
 import numpy as np
 import pandas as pd
-import json
-import hashlib
-from pathlib import Path
 import os
+import json
+from pathlib import Path
 
 
-class EEGDataGenerator:
-    """Generates synthetic EEG data with realistic characteristics"""
+def generate_sample_data():
+    """
+    Generate simulated EEG dataset with fixed age distribution.
+    Each age has exactly 20 samples.
+    """
+    np.random.seed(42)  # Fixed seed for reproducibility
 
-    def __init__(self, seed=42):
-        np.random.seed(seed)
-        self.age_distribution = [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 16, 19, 26, 47]
-        self.trials_per_age = 20
-        self.signal_length = 1000
-        self.total_subjects = 160  # 10 subjects per age (each has 2 trials)
+    # Fixed age distribution (as per your requirement)
+    ages = [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 16, 19, 26, 47]
+    samples_per_age = 20
+    total_samples = len(ages) * samples_per_age
 
-    def _generate_eeg_signal(self, age):
-        """Generate synthetic EEG signal based on age"""
-        t = np.linspace(0, 1, self.signal_length)
+    print(f"Generating {total_samples} samples ({len(ages)} ages x {samples_per_age} samples each)")
 
-        # Age-dependent frequency characteristics
-        if age <= 1:  # Infants
-            dominant_freq = np.random.uniform(3, 8)  # Delta/Theta
-            amplitude = np.random.uniform(0.5, 1.0)
-        elif age <= 12:  # Children
-            dominant_freq = np.random.uniform(8, 12)  # Alpha
-            amplitude = np.random.uniform(1.0, 1.5)
-        else:  # Adults
-            dominant_freq = np.random.uniform(12, 30)  # Beta
-            amplitude = np.random.uniform(0.8, 1.2)
+    # Create data records
+    data = []
+    sample_id = 0
 
-        # Generate signal components
-        alpha = amplitude * np.sin(2 * np.pi * dominant_freq * t)
-        beta = 0.3 * amplitude * np.sin(2 * np.pi * (dominant_freq * 1.5) * t)
-        gamma = 0.1 * amplitude * np.sin(2 * np.pi * (dominant_freq * 2) * t)
-        noise = 0.15 * np.random.randn(self.signal_length)
+    for age in ages:
+        # Generate 20 samples for each age
+        for age_sample_idx in range(samples_per_age):
+            # Generate random EEG signal (1000 time points)
+            t = np.linspace(0, 1, 1000)
+            alpha = np.sin(2 * np.pi * 10 * t)  # 10Hz alpha
+            beta = 0.5 * np.sin(2 * np.pi * 20 * t)  # 20Hz beta
+            noise = 0.2 * np.random.randn(1000)  # Gaussian noise
+            signal = alpha + beta + noise
 
-        signal = alpha + beta + gamma + noise
-        return signal
+            # Create unique subject ID for each sample
+            # In real scenario, one subject could have multiple samples
+            # But for simplicity, each sample is from a different subject
+            subject_id = f"sub_{age:03d}_{age_sample_idx:03d}"
+            file_name = f"{subject_id}_eeg.mat"
 
-    def _create_subject_hash(self, subject_id):
-        """Create deterministic hash for subject ID"""
-        return hashlib.md5(subject_id.encode()).hexdigest()[:10]
+            record = {
+                'trial_id': sample_id + 1000,
+                'file_name': file_name,
+                'trial_index': 0,  # All samples have index 0 (single trial per subject)
+                'age': age,
+                'subject_hash': f"hash_{hash(subject_id) % 100000:05d}",
+                'recording_date': f"2023-{np.random.randint(1, 13):02d}-{np.random.randint(1, 29):02d}"
+            }
 
-    def generate_samples(self):
-        """Generate dataset with fixed age distribution"""
-        records = []
-        full_signals = []
-        trial_id = 1000
+            # Add first 10 signal points to CSV
+            for j in range(min(10, len(signal))):
+                record[f'signal_{j}'] = signal[j]
 
-        # Create 10 subjects per age, each with 2 trials = 20 trials per age
-        for age_idx, age in enumerate(self.age_distribution):
-            for subject_idx in range(10):  # 10 subjects per age
-                subject_id = f"sub_{age:02d}_{subject_idx:03d}"
-                subject_hash = self._create_subject_hash(subject_id)
+            data.append(record)
+            sample_id += 1
 
-                # Generate 2 trials per subject
-                for trial_num in range(2):
-                    # Generate EEG signal
-                    signal = self._generate_eeg_signal(age)
+    # Create DataFrame
+    df = pd.DataFrame(data)
 
-                    # Create record for CSV
-                    record = {
-                        'trial_id': trial_id,
-                        'subject_id': subject_id,
-                        'subject_hash': subject_hash,
-                        'file_name': f"{subject_id}_ses{np.random.randint(1, 4)}.mat",
-                        'trial_index': trial_num,
-                        'age': age,
-                        'session_id': np.random.randint(1, 4),
-                        'recording_date': f"2023-{np.random.randint(1, 13):02d}-{np.random.randint(1, 29):02d}",
-                        'channel_count': 64,
-                        'sampling_rate': 256,
-                        'recording_duration': 1.0  # seconds
-                    }
+    # Ensure data directory exists
+    os.makedirs('data', exist_ok=True)
 
-                    # Add first 10 signal points to CSV
-                    for j in range(min(10, len(signal))):
-                        record[f'signal_point_{j:03d}'] = round(signal[j], 4)
+    # Save to CSV
+    csv_path = 'sample_eeg_data.csv'
+    df.to_csv(csv_path, index=False)
+    print(f"Saved CSV data to {csv_path}")
 
-                    records.append(record)
+    # Create full signals version (JSONL format)
+    jsonl_data = []
+    sample_id = 0
 
-                    # Create full signal for JSONL
-                    full_signals.append({
-                        'trial_id': trial_id,
-                        'subject_hash': subject_hash,
-                        'age': age,
-                        'signal': [round(float(x), 6) for x in signal],
-                        'metadata': {
-                            'subject_id': subject_id,
-                            'trial_index': trial_num,
-                            'sampling_rate': 256,
-                            'age_group': 'infant' if age <= 1 else 'child' if age <= 12 else 'adult'
-                        }
-                    })
+    for age in ages:
+        for age_sample_idx in range(samples_per_age):
+            t = np.linspace(0, 1, 1000)
+            alpha = np.sin(2 * np.pi * 10 * t)
+            beta = 0.5 * np.sin(2 * np.pi * 20 * t)
+            noise = 0.2 * np.random.randn(1000)
+            signal = (alpha + beta + noise).tolist()
 
-                    trial_id += 1
+            jsonl_data.append({
+                'trial_id': sample_id + 1000,
+                'signal': signal,
+                'age': age
+            })
+            sample_id += 1
 
-        # Create DataFrames
-        df = pd.DataFrame(records)
-        print(f"Generated {len(df)} records ({len(self.age_distribution)} ages × {self.trials_per_age} trials)")
-        print(f"Age distribution: {self.age_distribution}")
-        print(f"Total unique subjects: {df['subject_hash'].nunique()}")
+    # Save to JSONL
+    jsonl_path = 'sample_eeg_data.jsonl'
+    with open(jsonl_path, 'w') as f:
+        for item in jsonl_data:
+            f.write(json.dumps(item) + '\n')
+    print(f"Saved JSONL data to {jsonl_path}")
 
-        return df, full_signals
-
-    def save_data(self, df, full_signals):
-        """Save data to CSV and JSONL formats"""
-        # Ensure directories exist
-        Path("raw").mkdir(parents=True, exist_ok=True)
-        Path("processed").mkdir(parents=True, exist_ok=True)
-
-        # Save to CSV
-        csv_path = "raw/sample_eeg_data.csv"
-        df.to_csv(csv_path, index=False)
-        print(f"Saved CSV to: {csv_path}")
-
-        # Save to JSONL
-        jsonl_path = "processed/sample_eeg_data.jsonl"
-        with open(jsonl_path, 'w') as f:
-            for item in full_signals:
-                f.write(json.dumps(item) + '\n')
-        print(f"Saved JSONL to: {jsonl_path}")
-
-        return csv_path, jsonl_path
-
-
-def main():
-    """Main function to generate and save sample data"""
-    print("=" * 60)
-    print("Generating EEG Sample Data")
-    print("=" * 60)
-
-    generator = EEGDataGenerator(seed=42)
-    df, full_signals = generator.generate_samples()
-    csv_path, jsonl_path = generator.save_data(df, full_signals)
-
-    print("\nData Summary:")
-    print("-" * 40)
-    print(f"Total trials: {len(df)}")
-    print(f"Unique subjects: {df['subject_hash'].nunique()}")
-    print(f"Age distribution: {sorted(df['age'].unique())}")
-    print(f"Trials per age: {df['age'].value_counts().min()}")
-
-    print("\nFirst 3 records:")
-    print(df[['trial_id', 'subject_hash', 'age', 'trial_index']].head(3))
+    # Verify age distribution
+    age_counts = df['age'].value_counts().sort_index()
+    print("\nAge distribution verification:")
+    for age, count in age_counts.items():
+        print(f"  Age {age}: {count} samples")
 
     return df
 
 
 if __name__ == "__main__":
-    df = main()
+    df = generate_sample_data()
+    print(f"\nTotal samples generated: {len(df)}")
+    print("\nFirst 3 records:")
+    print(df[['trial_id', 'age', 'subject_hash']].head(3))
