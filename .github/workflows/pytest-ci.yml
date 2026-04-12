@@ -54,8 +54,13 @@ jobs:
           path: |
             data/sample_eeg_data.csv
             data/splits/
-      # Step8:Great Expectations
+      # Step 8: Great Expectations
       - name: Run Great Expectations Checks
         run: |
           echo "Running Great Expectations checks..."
           python tests/ge_checks.py
+      # Step 9: MLFlow
+      - name: Run MLflow Demo
+        run: |
+          echo "Running MLflow demo..."
+          python scripts/mlflow_demo.py
