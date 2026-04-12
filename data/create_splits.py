@@ -1,182 +1,187 @@
 """
-Create data splits for EEG dataset based on subject_hash
-Strategy: Split by subject to prevent data leakage
+Subject-based Data Splitting for EEG Dataset
+Ensures no data leakage by splitting at subject level (not trial level)
 """
 
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import json
-from collections import defaultdict
 
 
-def split_by_subject(df, test_ratio=0.15, val_ratio=0.15, random_seed=42):
-    """
-    Split dataset by subject to prevent data leakage
+class SubjectSplitter:
+    """Creates subject-based splits to prevent data leakage"""
 
-    Args:
-        df: DataFrame with 'subject_hash' column
-        test_ratio: Proportion of subjects for test set
-        val_ratio: Proportion of subjects for validation set
-        random_seed: Random seed for reproducibility
+    def __init__(self, csv_path="raw/sample_eeg_data.csv"):
+        self.csv_path = Path(csv_path)
+        self.df = pd.read_csv(csv_path)
+        self.split_dir = Path("splits")
+        self.split_dir.mkdir(exist_ok=True)
 
-    Returns:
-        Dictionary with split assignments
-    """
-    np.random.seed(random_seed)
+    def validate_subject_integrity(self):
+        """Check that all trials from same subject have same age"""
+        subject_ages = self.df.groupby('subject_hash')['age'].nunique()
+        invalid_subjects = subject_ages[subject_ages > 1]
 
-    # Get unique subjects
-    subjects = df['subject_hash'].unique()
-    n_subjects = len(subjects)
+        if len(invalid_subjects) > 0:
+            raise ValueError(f"Subjects with multiple ages: {invalid_subjects.index.tolist()}")
 
-    print(f"Total unique subjects: {n_subjects}")
-    print(f"Total trials: {len(df)}")
+        print(f"✓ Subject integrity check passed: {len(self.df['subject_hash'].unique())} unique subjects")
 
-    # Shuffle subjects
-    shuffled_subjects = np.random.permutation(subjects)
+    def create_stratified_splits(self, ratios=(0.7, 0.15, 0.15), seed=42):
+        """Create stratified splits preserving age distribution"""
+        np.random.seed(seed)
 
-    # Calculate split sizes
-    n_test = int(n_subjects * test_ratio)
-    n_val = int(n_subjects * val_ratio)
+        # Get unique subjects with their age
+        subject_info = self.df[['subject_hash', 'age']].drop_duplicates()
+        subjects_by_age = subject_info.groupby('age')['subject_hash'].apply(list).to_dict()
 
-    # Assign subjects to splits
-    test_subjects = shuffled_subjects[:n_test]
-    val_subjects = shuffled_subjects[n_test:n_test + n_val]
-    train_subjects = shuffled_subjects[n_test + n_val:]
+        # Initialize split lists
+        train_subjects = []
+        val_subjects = []
+        test_subjects = []
 
-    # Create split dictionary
-    splits = defaultdict(list)
-    for _, row in df.iterrows():
-        subject = row['subject_hash']
-        trial_id = row['trial_id']
+        # Split subjects by age to maintain distribution
+        for age, subjects in subjects_by_age.items():
+            np.random.shuffle(subjects)
+            n = len(subjects)
 
-        if subject in test_subjects:
-            splits['test'].append(trial_id)
-        elif subject in val_subjects:
-            splits['val'].append(trial_id)
-        else:
-            splits['train'].append(trial_id)
+            n_train = int(n * ratios[0])
+            n_val = int(n * ratios[1])
 
-    # Print statistics
-    print(f"\nSplit Statistics:")
-    print(f"Train: {len(splits['train'])} trials ({len(train_subjects)} subjects)")
-    print(f"Validation: {len(splits['val'])} trials ({len(val_subjects)} subjects)")
-    print(f"Test: {len(splits['test'])} trials ({len(test_subjects)} subjects)")
+            train_subjects.extend(subjects[:n_train])
+            val_subjects.extend(subjects[n_train:n_train + n_val])
+            test_subjects.extend(subjects[n_train + n_val:])
 
-    # Check for data leakage
-    train_set = set(splits['train'])
-    val_set = set(splits['val'])
-    test_set = set(splits['test'])
+        # Shuffle final lists
+        np.random.shuffle(train_subjects)
+        np.random.shuffle(val_subjects)
+        np.random.shuffle(test_subjects)
 
-    assert len(train_set & val_set) == 0, "Data leakage: Train/Val overlap!"
-    assert len(train_set & test_set) == 0, "Data leakage: Train/Test overlap!"
-    assert len(val_set & test_set) == 0, "Data leakage: Val/Test overlap!"
+        return train_subjects, val_subjects, test_subjects
 
-    return splits
+    def get_trials_by_subjects(self, subject_list):
+        """Get all trial_ids for given subjects"""
+        mask = self.df['subject_hash'].isin(subject_list)
+        return self.df.loc[mask, 'trial_id'].tolist()
+
+    def save_splits(self, train_subjects, val_subjects, test_subjects):
+        """Save split files in multiple formats"""
+
+        # Get trial IDs for each split
+        train_trials = self.get_trials_by_subjects(train_subjects)
+        val_trials = self.get_trials_by_subjects(val_subjects)
+        test_trials = self.get_trials_by_subjects(test_subjects)
+
+        # Save as .txt files (simple lists)
+        splits = {
+            'train': train_subjects,
+            'val': val_subjects,
+            'test': test_subjects
+        }
+
+        for split_name, subjects in splits.items():
+            with open(self.split_dir / f"{split_name}_subjects.txt", 'w') as f:
+                for subject in subjects:
+                    f.write(f"{subject}\n")
+
+        # Save as JSON for metadata
+        split_metadata = {
+            'split_strategy': 'subject_stratified',
+            'ratios': {'train': 0.7, 'val': 0.15, 'test': 0.15},
+            'statistics': {
+                'total_subjects': len(self.df['subject_hash'].unique()),
+                'total_trials': len(self.df),
+                'train_subjects': len(train_subjects),
+                'val_subjects': len(val_subjects),
+                'test_subjects': len(test_subjects),
+                'train_trials': len(train_trials),
+                'val_trials': len(val_trials),
+                'test_trials': len(test_trials)
+            },
+            'age_distribution': {
+                'train': self.df[self.df['subject_hash'].isin(train_subjects)]['age'].value_counts().to_dict(),
+                'val': self.df[self.df['subject_hash'].isin(val_subjects)]['age'].value_counts().to_dict(),
+                'test': self.df[self.df['subject_hash'].isin(test_subjects)]['age'].value_counts().to_dict()
+            }
+        }
+
+        with open(self.split_dir / 'split_metadata.json', 'w') as f:
+            json.dump(split_metadata, f, indent=2)
+
+        # Save trial-level splits
+        trial_splits = {
+            'train_trials.txt': train_trials,
+            'val_trials.txt': val_trials,
+            'test_trials.txt': test_trials
+        }
+
+        for filename, trials in trial_splits.items():
+            with open(self.split_dir / filename, 'w') as f:
+                for trial_id in trials:
+                    f.write(f"{trial_id}\n")
+
+        return split_metadata
+
+    def verify_no_leakage(self, train_subjects, val_subjects, test_subjects):
+        """Verify no subject appears in multiple splits"""
+        train_set = set(train_subjects)
+        val_set = set(val_subjects)
+        test_set = set(test_subjects)
+
+        # Check intersections
+        assert len(train_set & val_set) == 0, "Leakage between train and val!"
+        assert len(train_set & test_set) == 0, "Leakage between train and test!"
+        assert len(val_set & test_set) == 0, "Leakage between val and test!"
+
+        # Check coverage
+        all_subjects = train_set | val_set | test_set
+        unique_subjects = set(self.df['subject_hash'].unique())
+        assert all_subjects == unique_subjects, "Not all subjects are split!"
+
+        print("✓ No data leakage detected")
+        print(f"  Train: {len(train_set)} subjects")
+        print(f"  Val: {len(val_set)} subjects")
+        print(f"  Test: {len(test_set)} subjects")
+
+    def run(self):
+        """Execute complete splitting pipeline"""
+        print("=" * 60)
+        print("Creating Subject-Based Data Splits")
+        print("=" * 60)
+
+        # Validate data
+        self.validate_subject_integrity()
+
+        # Create splits
+        train_subjects, val_subjects, test_subjects = self.create_stratified_splits()
+
+        # Verify no leakage
+        self.verify_no_leakage(train_subjects, val_subjects, test_subjects)
+
+        # Save splits
+        metadata = self.save_splits(train_subjects, val_subjects, test_subjects)
+
+        print("\nSplit Statistics:")
+        print("-" * 40)
+        stats = metadata['statistics']
+        print(f"Total Subjects: {stats['total_subjects']}")
+        print(f"Total Trials: {stats['total_trials']}")
+        print(f"Train: {stats['train_subjects']} subjects, {stats['train_trials']} trials")
+        print(f"Validation: {stats['val_subjects']} subjects, {stats['val_trials']} trials")
+        print(f"Test: {stats['test_subjects']} subjects, {stats['test_trials']} trials")
+
+        print(f"\n✓ Splits saved to: {self.split_dir}")
+
+        return metadata
 
 
-def create_split_files(df, output_dir="data/splits"):
-    """
-    Create split files and save to disk
-
-    Args:
-        df: Input DataFrame
-        output_dir: Directory to save split files
-    """
-    # Create splits
-    splits = split_by_subject(df)
-
-    # Ensure output directory exists
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
-
-    # Save each split as text file
-    for split_name, trial_ids in splits.items():
-        file_path = Path(output_dir) / f"{split_name}_ids.txt"
-        with open(file_path, 'w') as f:
-            for trial_id in trial_ids:
-                f.write(f"{trial_id}\n")
-        print(f"Saved {len(trial_ids)} trial IDs to {file_path}")
-
-    # Also save as JSON for easy reference
-    json_path = Path(output_dir) / "splits_metadata.json"
-    metadata = {
-        "split_strategy": "subject_based",
-        "description": "Splits created by subject_hash to prevent data leakage",
-        "total_trials": len(df),
-        "unique_subjects": df['subject_hash'].nunique(),
-        "split_counts": {k: len(v) for k, v in splits.items()}
-    }
-
-    with open(json_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
-
-    print(f"\nSplit metadata saved to {json_path}")
-
-    return splits
-
-
-def validate_splits(df, split_dir="data/splits"):
-    """
-    Validate that splits are correctly implemented
-
-    Args:
-        df: Original DataFrame
-        split_dir: Directory containing split files
-    """
-    split_dir = Path(split_dir)
-
-    # Load split IDs
-    splits = {}
-    for split_file in split_dir.glob("*_ids.txt"):
-        split_name = split_file.stem.replace("_ids", "")
-        with open(split_file, 'r') as f:
-            trial_ids = [int(line.strip()) for line in f if line.strip()]
-        splits[split_name] = set(trial_ids)
-
-    # Check all trial IDs are accounted for
-    all_split_ids = set()
-    for split_set in splits.values():
-        all_split_ids.update(split_set)
-
-    all_trial_ids = set(df['trial_id'])
-
-    print(f"\nSplit Validation:")
-    print(f"Total trials in dataset: {len(all_trial_ids)}")
-    print(f"Total trials in splits: {len(all_split_ids)}")
-
-    # Check for missing or extra trials
-    missing = all_trial_ids - all_split_ids
-    extra = all_split_ids - all_trial_ids
-
-    if missing:
-        print(f"WARNING: {len(missing)} trials missing from splits")
-    if extra:
-        print(f"WARNING: {len(extra)} extra trials in splits")
-
-    # Check for overlaps between splits
-    for split1_name, split1_set in splits.items():
-        for split2_name, split2_set in splits.items():
-            if split1_name != split2_name:
-                overlap = split1_set & split2_set
-                if overlap:
-                    print(f"ERROR: {len(overlap)} overlapping trials between {split1_name} and {split2_name}")
-
-    return len(missing) == 0 and len(extra) == 0
+def main():
+    """Main function to create splits"""
+    splitter = SubjectSplitter()
+    metadata = splitter.run()
+    return metadata
 
 
 if __name__ == "__main__":
-    # Load the dataset
-    data_path = Path(__file__).parent.parent / "data" / "sample_eeg_data.csv"
-    df = pd.read_csv(data_path)
-
-    print("Creating subject-based splits...")
-    splits = create_split_files(df)
-
-    print("\nValidating splits...")
-    is_valid = validate_splits(df)
-
-    if is_valid:
-        print("✓ All splits validated successfully!")
-    else:
-        print("✗ Split validation failed!")
-        exit(1)
+    metadata = main()
