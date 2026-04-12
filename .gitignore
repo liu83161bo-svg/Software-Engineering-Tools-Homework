@@ -206,4 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-
+data/sample_eeg_data.csv
+data/sample_eeg_data.jsonl
+.dvc/remote/

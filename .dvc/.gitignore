@@ -1,7 +1,7 @@
 /config.local
 /tmp
 /cache
-echo "# DVC tracked files" >> .gitignore
-echo "data/sample_eeg_data.csv" >> .gitignore
-echo "data/sample_eeg_data.jsonl" >> .gitignore
-echo ".dvc/remote/" >> .gitignore
+# DVC tracked files
+data/sample_eeg_data.csv
+data/sample_eeg_data.jsonl
+.dvc/remote/
