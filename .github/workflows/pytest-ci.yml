@@ -25,16 +25,11 @@ jobs:
       
       - name: Setup DVC
         run: |
-          dvc init --no-scm
-          dvc remote add -d localremote /tmp/dvc-storage
-      
-      - name: Generate Sample Data
-        run: |
-          python scripts/generate_eeg_data.py --n-samples 30
-      
-      - name: Create Data Splits
-        run: |
-          python scripts/create_data_splits.py
+          pip install dvc
+          if [ ! -d .dvc ]; then
+            dvc init --no-scm
+            dvc remote add -d localremote /tmp/dvc-storage
+          fi
       
       - name: Run Data Quality Checks
         run: |
