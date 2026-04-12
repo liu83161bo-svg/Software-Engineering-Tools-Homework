@@ -54,3 +54,8 @@ jobs:
           path: |
             data/sample_eeg_data.csv
             data/splits/
+      # Step8:Great Expectations
+      - name: Run Great Expectations Checks
+        run: |
+          echo "Running Great Expectations checks..."
+          python tests/ge_checks.py
