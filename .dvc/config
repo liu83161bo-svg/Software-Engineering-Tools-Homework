@@ -1,4 +1,0 @@
-['remote "myremote"']
-    url = ../eeg_data_dvc_remote
-['remote "myremote"']
-    url = ../eeg_data_dvc_remote
