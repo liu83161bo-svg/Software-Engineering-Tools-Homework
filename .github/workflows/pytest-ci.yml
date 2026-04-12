@@ -28,7 +28,7 @@ jobs:
           pip install pytest pandas numpy
       
       # Step 4: Generate sample data (instead of pulling from DVC)
-      - name: Generate Sample Data
+      - name: Generate Sample Data (instead of pulling from DVC)
         run: |
           echo "Generating sample data for CI..."
           cd data
