@@ -31,14 +31,6 @@ jobs:
             dvc remote add -d localremote /tmp/dvc-storage
           fi
       
-      - name: Generate Sample Data
-        run: |
-          python scripts/generate_eeg_data.py --n-samples 30
-      
-      - name: Create Data Splits
-        run: |
-          python scripts/create_data_splits.py
-      
       - name: Run Data Quality Checks
         run: |
           python tests/test_data_checks.py
