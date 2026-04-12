@@ -25,8 +25,11 @@ jobs:
       
       - name: Setup DVC
         run: |
-          dvc init --no-scm
-          dvc remote add -d localremote /tmp/dvc-storage
+          pip install dvc
+          if [ ! -d .dvc ]; then
+            dvc init --no-scm
+            dvc remote add -d localremote /tmp/dvc-storage
+          fi
       
       - name: Generate Sample Data
         run: |
