@@ -25,7 +25,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pandas numpy
+          pip install pytest pandas numpy mlflow great_expectations
       
       # Step 4: Generate sample data (instead of pulling from DVC)
       - name: Generate Sample Data (instead of pulling from DVC)
