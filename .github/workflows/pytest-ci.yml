@@ -45,14 +45,23 @@ jobs:
       # Step 4: Set up DVC
       - name: Setup DVC
         run: |
-          dvc doctor
-          echo "DVC version: $(dvc --version)"
-          # Initialize DVC (if not already initialized in repo)
-          if [ ! -f .dvc/.gitignore ]; then
+          echo "DVC version: $(dvc --version 2>/dev/null || echo 'not installed')"
+    
+          if [ ! -d .dvc ]; then
+            echo "Initializing DVC..."
             dvc init --no-scm
+            dvc remote add -d mylocalremote .dvc/cache
+          else
+            echo "DVC already initialized"
           fi
-          # Pull data from DVC remote (using cache from Git)
-          dvc pull || echo "DVC pull failed, regenerating data..."
+    
+          if [ -f .dvc/config ]; then
+            echo "Checking DVC config..."
+            echo "[core]" > .dvc/config
+            echo "    autostage = true" >> .dvc/config
+            echo "['remote \"mylocalremote\"']" >> .dvc/config
+            echo "    url = .dvc/cache" >> .dvc/config
+          fi
 
       # Step 5: Generate sample data if DVC pull failed
       - name: Generate Sample Data
