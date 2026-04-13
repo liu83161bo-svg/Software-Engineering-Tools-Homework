@@ -1,0 +1,5 @@
+Dataset: EEG Age Classification
+Total samples: 320
+Age range: 0 - 47
+Unique ages: 16
+Columns: trial_id, file_name, trial_index, age, subject_hash, recording_date, signal_0, signal_1, signal_2, signal_3, signal_4, signal_5, signal_6, signal_7, signal_8, signal_9
