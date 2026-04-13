@@ -11,21 +11,58 @@ import os
 import sys
 from pathlib import Path
 
+
 class SimpleEvalGate:
-    def __init__(self, config_path="../configs/thresholds.yaml"):
+    def __init__(self, config_path=None):
         """Initialize with thresholds"""
+        if config_path is None:
+            # 在CI中，当前目录是仓库根目录，所以使用configs/thresholds.yaml
+            # 如果从pipelines目录运行，使用../configs/thresholds.yaml
+            current_dir = Path.cwd()
+            config_candidates = [
+                Path("configs/thresholds.yaml"),  # CI路径
+                Path("../configs/thresholds.yaml"),  # 本地从pipelines目录运行的路径
+                Path(__file__).parent.parent / "configs" / "thresholds.yaml"  # 绝对路径
+            ]
+
+            # 找到第一个存在的配置文件
+            for candidate in config_candidates:
+                if candidate.exists():
+                    config_path = str(candidate)
+                    print(f"Found config at: {config_path}")
+                    break
+
+            if config_path is None:
+                print("ERROR: Could not find thresholds.yaml")
+                print("Looking in:")
+                for candidate in config_candidates:
+                    print(f"  - {candidate}")
+                sys.exit(1)
+
         self.config_path = config_path
         self.load_thresholds()
 
     def load_thresholds(self):
         """Load thresholds from YAML config"""
-        with open(self.config_path, 'r') as f:
-            self.thresholds = yaml.safe_load(f)
-        print("Thresholds loaded:", json.dumps(self.thresholds, indent=2))
+        try:
+            with open(self.config_path, 'r') as f:
+                self.thresholds = yaml.safe_load(f)
+            print(f"✓ Thresholds loaded from {self.config_path}")
+        except Exception as e:
+            print(f"ERROR loading thresholds: {e}")
+            # 创建默认阈值作为备用
+            self.thresholds = {
+                'accuracy': {'threshold': 0.80, 'description': 'Minimum accuracy required'},
+                'avg_recall': {'threshold': 0.70, 'description': 'Minimum average recall required'},
+                'per_class_recall': {'threshold': 0.60, 'description': 'Minimum recall for any single class'},
+                'critical_ages': [0, 1, 2, 3]
+            }
+            print("Using default thresholds")
 
     def simulate_model_performance(self):
         """Simulate model performance on golden set"""
         # Simulate performance metrics
+        np.random.seed(42)  # 固定种子确保可重复
         accuracy = np.random.uniform(0.75, 0.90)  # 75-90% accuracy
         avg_recall = np.random.uniform(0.70, 0.85)  # 70-85% recall
 
@@ -102,7 +139,7 @@ class SimpleEvalGate:
         metrics_path = os.path.join(output_dir, "metrics.json")
         with open(metrics_path, 'w') as f:
             json.dump(results, f, indent=2)
-        print(f"\nResults saved to: {metrics_path}")
+        print(f"\n✓ Results saved to: {metrics_path}")
 
         # Save summary for CI
         summary_path = os.path.join(output_dir, "eval_summary.txt")
@@ -142,13 +179,19 @@ class SimpleEvalGate:
             print(f"\n✓ EVALUATION PASSED")
             return True
 
+
 def main():
     """Main function for CI integration"""
-    # Set random seed for reproducibility
-    np.random.seed(42)
+    # 接受命令行参数指定配置文件路径
+    import argparse
+    parser = argparse.ArgumentParser(description="Run evaluation gate")
+    parser.add_argument("--config", type=str, default=None,
+                        help="Path to thresholds.yaml config file")
+
+    args = parser.parse_args()
 
     # Run evaluation gate
-    eval_gate = SimpleEvalGate()
+    eval_gate = SimpleEvalGate(config_path=args.config)
     success = eval_gate.run()
 
     # Exit with appropriate code
@@ -157,6 +200,7 @@ def main():
     else:
         print("\nCI will fail due to evaluation gate failure")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
