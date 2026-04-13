@@ -225,7 +225,7 @@ def analyze_golden_set(samples):
 
     return age_counts
 
-def save_golden_set(samples, output_dir="./data/golden_set"):
+def save_golden_set(samples, output_dir="golden_set"):
     """Save golden set in multiple formats"""
     os.makedirs(output_dir, exist_ok=True)
 
@@ -301,7 +301,7 @@ def save_golden_set(samples, output_dir="./data/golden_set"):
 
     return jsonl_path, csv_path, metadata_path
 
-def create_golden_set_report(samples, output_dir="./data/golden_set"):
+def create_golden_set_report(samples, output_dir="golden_set"):
     """Create a comprehensive report of the golden set"""
     report_path = os.path.join(output_dir, "golden_set_report.txt")
 
