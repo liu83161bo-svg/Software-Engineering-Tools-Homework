@@ -423,7 +423,7 @@ def create_minimal_golden_set():
 
     # Create 20 samples quickly
     samples = []
-    ages = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45]
+    ages = [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 16, 19, 26, 47]
 
     for i, age in enumerate(ages):
         # Very simple signal

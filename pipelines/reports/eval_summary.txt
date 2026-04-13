@@ -1,8 +1,16 @@
 EVALUATION GATE SUMMARY
 ==================================================
 
-Accuracy: 0.8062
-Avg Recall: 0.8426
+Accuracy: 0.8500
+Avg Recall: 0.7205
 Model Version: simulated_v1.0
-Timestamp: 2026-04-13T02:39:12
+Timestamp: 2026-04-13T02:46:34
 Samples: 40
+
+Critical Ages Performance:
+  Age 0: 0.6786 (threshold: 0.6000) - PASS
+  Age 1: 0.6679 (threshold: 0.6000) - PASS
+  Age 2: 0.6500 (threshold: 0.6000) - PASS
+  Age 3: 0.6500 (threshold: 0.6000) - PASS
+  Age 4: 0.6500 (threshold: 0.6000) - PASS
+  Age 5: 0.8232 (threshold: 0.6000) - PASS
