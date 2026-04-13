@@ -59,11 +59,17 @@ jobs:
           echo "Creating HW4 golden set from simulated data..."
           python data/create_golden_set.py
 
-      # Step 9: Create test reports directory
+      # Step 9: Evaluation
+      - name: Run Evaluation Gate (HW4)
+        run: |
+          echo "Running HW4 evaluation gate..."
+          python pipelines/eval_gate.py
+
+      # Step 10: Create test reports directory
       - name: Create Reports Directory
         run: mkdir -p reports
 
-      # Step 10: Upload artifacts
+      # Step 11: Upload artifacts
       - name: Upload Data Quality Report
         if: always()
         uses: actions/upload-artifact@v4
