@@ -77,9 +77,9 @@
 ```json
 {
   "report_type": "Model Evaluation",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "model_version": "v1.2.0",
-  "dataset_version": "golden_v2",
+  "timestamp": "2026-01-01T10:30:00Z",
+  "model_version": "v1.0.0",
+  "dataset_version": "golden_v1",
   "metrics": {
     "accuracy": 0.85,
     "avg_recall": 0.78,
