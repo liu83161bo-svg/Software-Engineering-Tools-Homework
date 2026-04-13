@@ -52,12 +52,18 @@ jobs:
         run: |
           echo "Running MLflow demo..."
           python tests/mlflow_demo.py
+          
+      # Step 8: golden set
+      - name: Create Golden Set (HW4)
+        run: |
+          echo "Creating HW4 golden set from simulated data..."
+          python data/create_golden_set.py
 
-      # Step 8: Create test reports directory
+      # Step 9: Create test reports directory
       - name: Create Reports Directory
         run: mkdir -p reports
 
-      # Step 9: Upload artifacts
+      # Step 10: Upload artifacts
       - name: Upload Data Quality Report
         if: always()
         uses: actions/upload-artifact@v4
