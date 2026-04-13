@@ -1,85 +1,64 @@
-# EEG Age Classification Model Specification
+# Model Specification - EEG Age Classifier
 
 ## 1. Baseline Model
 ### 1.1 Current Baseline
-- **Model Type**: Random Forest Classifier
-- **Configuration**:
-  - `n_estimators`: 100
-  - `max_depth`: 10
-  - `random_state`: 42
-- **Performance**:
-  - Accuracy: 0.65 (on validation set)
-  - Inference time: 50ms per sample
-  - Memory usage: 200MB
+- **Model**: CNN with Attention Pooling (AgeClassifier)
+- **Architecture**: 
+  - 4 convolutional layers (64-128-256-512 channels)
+  - Attention pooling over time dimension
+  - 3 fully connected layers (512-256-128)
+- **Input**: 1000Hz EEG signal, 1000 time points
+- **Output**: Age classification (16 age categories)
+- **Performance**: ~85% accuracy on validation set
 
-### 1.2 Baseline Selection Criteria
-- Simple to implement and reproduce
-- Provides reasonable performance without over-engineering
-- Established using fixed dataset version v1.0
-- All artifacts stored in MLflow
+### 1.2 Simple Baselines (For Comparison)
+- **Rule-based baseline**: Majority class prediction
+- **Statistical baseline**: Linear regression on signal features
+- **Simple ML baseline**: Random Forest with extracted features
 
 ## 2. Applicability Limits
-### 2.1 Supported Inputs
-- **Signal Type**: EEG time-series data
-- **Signal Length**: 1000 time points
-- **Sampling Rate**: 1000Hz
-- **Age Range**: 0-100 years
-- **Format**: CSV or JSONL with predefined schema
+### 2.1 Domain Constraints
+- **Input signal**: Must be 1000Hz EEG, bandpass filtered (8-100Hz)
+- **Signal length**: Exactly 1000 time points
+- **Age range**: 0-47 years (16 discrete categories)
+- **Data source**: Compatible with .mat format from specified recording setup
 
-### 2.2 Unsupported Scenarios
-- Signals with significant noise (>50% corruption)
-- Subjects with neurological disorders (unless trained for)
-- Signals shorter than 500 time points
-- Real-time streaming without windowing
-
-### 2.3 Ethical Constraints
-- Not for medical diagnosis
-- Age estimation only for research purposes
-- Must include uncertainty estimates for critical decisions
+### 2.2 Out-of-Distribution Detection
+- Signals with SNR < 10dB should be flagged
+- Age predictions beyond 0-100 years considered invalid
+- Unusual signal patterns (epileptic spikes) should trigger fallback
 
 ## 3. Resource Envelope
-### 3.1 Compute Requirements
-- **Training**: 
-  - CPU: 4 cores minimum
-  - RAM: 8GB minimum
-  - Time: < 30 minutes for 10,000 samples
-- **Inference**:
-  - CPU: 2 cores
-  - RAM: 2GB
-  - Latency: < 100ms per sample (p95)
-  - Throughput: > 100 samples/second
+### 3.1 Computational Requirements
+- **Training**: ~30 minutes on GPU (NVIDIA RTX 3060)
+- **Inference**: <10ms per sample on CPU, <2ms on GPU
+- **Memory**: Model size ~15MB, inference requires <100MB RAM
 
-### 3.2 Storage Requirements
-- **Model Size**: < 500MB
-- **Input Data**: < 1GB per experiment
-- **Artifacts**: < 5GB per project
-
-### 3.3 Cost Limits
-- **Training**: < $50 per experiment (cloud compute)
-- **Inference**: < $0.001 per prediction at scale
-- **Storage**: < $10/month for model artifacts
+### 3.2 Deployment Constraints
+- **Minimum hardware**: CPU with AVX2 support
+- **Maximum latency**: 50ms for real-time applications
+- **Throughput**: >100 samples/second on single CPU core
 
 ## 4. Update Policy
 ### 4.1 Update Triggers
-- Performance degradation > 5% on validation set
-- New data distribution significantly different
-- Security vulnerability in dependencies
-- Regulatory requirement changes
+- **Performance degradation**: >5% accuracy drop on golden set
+- **Data drift**: Statistical shift in input distribution
+- **New age categories**: Adding age groups outside current range
+- **Hardware changes**: Migration to new inference hardware
 
 ### 4.2 Update Process
-1. **Evaluation**: Challenger model must outperform champion by >3%
-2. **Testing**: Pass all regression tests and edge cases
-3. **Approval**: Requires review by at least 2 team members
-4. **Deployment**: Gradual rollout with monitoring
-5. **Rollback**: Automated if performance drops >2%
+1. **Staging**: Deploy to 10% of traffic for 24h
+2. **Monitoring**: Track accuracy, latency, error distribution
+3. **Rollback criteria**: Any degradation on critical slices
+4. **Full deployment**: After 7 days of stable performance
 
-### 4.3 Versioning
-- Semantic versioning: MAJOR.MINOR.PATCH
-- All versions stored in MLflow with complete metadata
-- Previous versions maintained for 6 months
+## 5. Failure Modes & Fallbacks
+### 5.1 Detected Failures
+- High prediction uncertainty (>0.8 entropy)
+- Out-of-distribution signals
+- Hardware failure (GPU unavailable)
 
-## 5. References
-- Dataset: EEG Age Classification v1.0
-- Baseline Run ID: `mlflow_run_001` in MLflow
-- Code Commit: `git-sha-abc123`
-- Data Version: `dvc-hash-xyz789`
+### 5.2 Fallback Strategies
+1. **Primary**: Return to previous model version
+2. **Secondary**: Rule-based age estimation
+3. **Tertiary**: Flag for human review
