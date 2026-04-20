@@ -1,0 +1,52 @@
+# Evaluation Thresholds
+
+# Primary Metrics
+accuracy:
+  threshold: 0.80  # Minimum acceptable accuracy
+  tolerance: 0.02  # Allowable variation
+  description: "Overall classification accuracy"
+  action_on_fail: "Block deployment"
+
+avg_recall:
+  threshold: 0.70  # Minimum average recall across classes
+  tolerance: 0.05
+  description: "Macro-average recall"
+  action_on_fail: "Investigate class imbalance"
+
+per_class_recall:
+  threshold: 0.60  # Minimum recall for any single class
+  tolerance: 0.10
+  description: "Worst-case class performance"
+  action_on_fail: "Retrain with class weighting"
+
+# Critical age groups (must perform well)
+critical_ages: [0, 1, 2, 3, 4, 5]  # Young children
+
+# Resource Constraints
+latency:
+  threshold: 20  # milliseconds
+  tolerance: 5
+  description: "P95 inference latency"
+  action_on_fail: "Optimize model"
+
+memory:
+  threshold: 100  # MB
+  tolerance: 20
+  description: "Maximum RAM usage"
+  action_on_fail: "Model compression"
+
+# Regression Rules
+regression_rules:
+  - metric: accuracy
+    max_degradation: 0.02  # Maximum 2% degradation from baseline
+  - metric: avg_recall
+    max_degradation: 0.03  # Maximum 3% degradation
+  - metric: latency
+    max_increase: 1.10  # Maximum 10% increase
+
+# Evaluation Frequency
+evaluation_frequency:
+  pre_deployment: "always"
+  post_deployment: "weekly"
+  data_drift: "monthly"
+  model_update: "always"

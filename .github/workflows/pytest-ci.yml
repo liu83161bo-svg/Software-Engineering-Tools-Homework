@@ -1,59 +1,80 @@
-# ==============================================================================
-# CI Pipeline for Software-Engineering-Tools-Homework
-# Triggers on every code push and pull request to ensure code quality
-# ==============================================================================
 name: Software-Engineering-Tools-Homework
 
-# Trigger conditions: run on every push and pull request
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-# Define CI jobs
 jobs:
-  pytest-test:
-    # Run on the latest Ubuntu environment provided by GitHub
+  data-pipeline:
     runs-on: ubuntu-latest
-
-    # CI execution steps
+    
     steps:
-      # Step 1: Check out the code from repository to CI runner
+      # Step 1: Check out code
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      # Step 2: Set up Python 3.10 environment
+      
+      # Step 2: Set up Python
       - name: Set Up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-
-      # Step 3: Install required Python packages
+      
+      # Step 3: Install dependencies
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov
-
-      # Step 4: Create a sample test file to ensure test suite works
-      - name: Create Basic Test File
+          pip install pytest pandas numpy mlflow great_expectations
+      
+      # Step 4: Generate sample data (instead of pulling from DVC)
+      - name: Generate Sample Data (instead of pulling from DVC)
         run: |
-          mkdir -p tests
-          echo "def test_sample(): assert 1 + 1 == 2" > tests/test_sample.py
+          echo "Generating sample data for CI..."
+          cd data
+          python generate_sample_data.py
+          python create_splits.py
+      
+      # Step 5: Run data quality checks
+      - name: Run Data Quality Checks
+        run: |
+          echo "Running data quality checks..."
+          python tests/test_data_checks.py
+        
+      # Step 6: Great Expectations
+      - name: Run Great Expectations Checks
+        run: |
+          echo "Running Great Expectations checks..."
+          python tests/ge_checks.py
+          
+      # Step 7: MLFlow
+      - name: Run MLflow Demo
+        run: |
+          echo "Running MLflow demo..."
+          python tests/mlflow_demo.py
+          
+      # Step 8: golden set
+      - name: Create Golden Set (HW4)
+        run: |
+          echo "Creating HW4 golden set from simulated data..."
+          python data/create_golden_set.py
 
-      # Step 5: Run pytest and calculate test coverage
-      - name: Run Pytest with Coverage
-        run: pytest tests/ --cov=src/ --cov-report=xml
+      # Step 9: Evaluation
+      - name: Run Evaluation Gate (HW4)
+        run: |
+          echo "Running HW4 evaluation gate..."
+          python pipelines/eval_gate.py
 
-      # Step 6: Generate test report in JUnit XML format
-      - name: Generate Test Report
-        if: always()
-        run: pytest tests/ --junitxml=reports/pytest-results.xml
+      # Step 10: Create test reports directory
+      - name: Create Reports Directory
+        run: mkdir -p reports
 
-      # Step 7: Upload test report as an artifact for review
-      - name: Upload Test Report
+      # Step 11: Upload artifacts
+      - name: Upload Data Quality Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-test-report
-          path: reports/
+          name: data-quality-report
+          path: |
+            data/sample_eeg_data.csv
+            data/splits/

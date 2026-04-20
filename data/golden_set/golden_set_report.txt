@@ -1,0 +1,79 @@
+============================================================
+GOLDEN SET REPORT - HW4 EEG Age Classification
+============================================================
+
+Creation Date: 2026-04-13 17:59:09
+Total Samples: 39
+
+AGE DISTRIBUTION:
+------------------------------
+Age  0:  3 samples (  7.7%)
+Age  1:  2 samples (  5.1%)
+Age  2:  3 samples (  7.7%)
+Age  3:  3 samples (  7.7%)
+Age  4:  2 samples (  5.1%)
+Age  5:  3 samples (  7.7%)
+Age  6:  2 samples (  5.1%)
+Age  7:  2 samples (  5.1%)
+Age 10:  3 samples (  7.7%)
+Age 11:  3 samples (  7.7%)
+Age 12:  2 samples (  5.1%)
+Age 13:  2 samples (  5.1%)
+Age 16:  3 samples (  7.7%)
+Age 19:  2 samples (  5.1%)
+Age 26:  2 samples (  5.1%)
+Age 47:  2 samples (  5.1%)
+
+------------------------------
+
+QUALITY STATISTICS:
+  Average quality: 0.850
+  Minimum quality: 0.850
+  Maximum quality: 0.850
+
+SIGNAL STATISTICS:
+  Signal length: 1000 (consistent: True)
+  Mean of means: -0.000000
+  Mean of stds:  1.000000
+
+SAMPLE DETAILS (first 5 samples):
+------------------------------------------------------------
+
+Sample 1:
+  ID: synth_0_0
+  Age: 0
+  Quality: 0.85
+  Synthetic: True
+  File: synth_0_0.mat
+
+Sample 2:
+  ID: synth_0_1
+  Age: 0
+  Quality: 0.85
+  Synthetic: True
+  File: synth_0_1.mat
+
+Sample 3:
+  ID: synth_1_0
+  Age: 1
+  Quality: 0.85
+  Synthetic: True
+  File: synth_1_0.mat
+
+Sample 4:
+  ID: synth_1_1
+  Age: 1
+  Quality: 0.85
+  Synthetic: True
+  File: synth_1_1.mat
+
+Sample 5:
+  ID: synth_2_0
+  Age: 2
+  Quality: 0.85
+  Synthetic: True
+  File: synth_2_0.mat
+
+============================================================
+END OF REPORT
+============================================================
