@@ -65,11 +65,16 @@ jobs:
           echo "Running HW4 evaluation gate..."
           python pipelines/eval_gate.py
 
-      # Step 10: Create test reports directory
+      # Step 10: SLO
+      - name: Run SLO Gate (Latency & Error Budget)
+        run: |
+          python tests/slo_gate.py
+
+      # Step 11: Create test reports directory
       - name: Create Reports Directory
         run: mkdir -p reports
 
-      # Step 11: Upload artifacts
+      # Step 12: Upload artifacts
       - name: Upload Data Quality Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -78,3 +83,4 @@ jobs:
           path: |
             data/sample_eeg_data.csv
             data/splits/
+
