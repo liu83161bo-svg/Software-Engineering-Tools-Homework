@@ -1,0 +1,5 @@
+outs:
+- md5: 8a3518fcd699fd3031f16a915feeab20
+  size: 9653
+  hash: md5
+  path: golden_samples.csv
