@@ -9,72 +9,85 @@ on:
 jobs:
   data-pipeline:
     runs-on: ubuntu-latest
-    
+
     steps:
       # Step 1: Check out code
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       # Step 2: Set up Python
       - name: Set Up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      
-      # Step 3: Install dependencies
+
+      # Step 3: Install dependencies (added pyyaml for safety tests)
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pandas numpy mlflow great_expectations
-      
-      # Step 4: Generate sample data (instead of pulling from DVC)
+          pip install pytest pandas numpy mlflow great_expectations pyyaml
+
+      # Step 4: Generate sample data
       - name: Generate Sample Data (instead of pulling from DVC)
         run: |
           echo "Generating sample data for CI..."
           cd data
           python generate_sample_data.py
           python create_splits.py
-      
+
       # Step 5: Run data quality checks
       - name: Run Data Quality Checks
         run: |
           echo "Running data quality checks..."
           python tests/test_data_checks.py
-        
+
       # Step 6: Great Expectations
       - name: Run Great Expectations Checks
         run: |
           echo "Running Great Expectations checks..."
           python tests/ge_checks.py
-          
-      # Step 7: MLFlow
+
+      # Step 7: MLflow
       - name: Run MLflow Demo
         run: |
           echo "Running MLflow demo..."
           python tests/mlflow_demo.py
-          
-      # Step 8: golden set
+
+      # Step 8: Golden Set (HW4)
       - name: Create Golden Set (HW4)
         run: |
           echo "Creating HW4 golden set from simulated data..."
           python data/create_golden_set.py
 
-      # Step 9: Evaluation
+      # Step 9: Evaluation Gate (HW4)
       - name: Run Evaluation Gate (HW4)
         run: |
           echo "Running HW4 evaluation gate..."
           python pipelines/eval_gate.py
 
-      # Step 10: SLO
+      # Step 10: SLO Gate (HW6)
       - name: Run SLO Gate (Latency & Error Budget)
         run: |
           python tests/slo_gate.py
 
-      # Step 11: Create test reports directory
+      # ===== Session 7: Safety Tests =====
+      # Step 11: Secret Scanning with gitleaks
+      - name: Run gitleaks (Secret Scanning)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 12: Run Safety Tests (5 tests: format, refusal, tool blocking, schema)
+      - name: Run Safety Tests (HW7)
+        run: |
+          echo "Running HW7 safety tests..."
+          python -m pytest tests/test_safety.py -v
+
+      # Step 13: Create reports directory
       - name: Create Reports Directory
         run: mkdir -p reports
 
-      # Step 12: Upload artifacts
+      # Step 14: Upload artifacts
       - name: Upload Data Quality Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,4 +96,3 @@ jobs:
           path: |
             data/sample_eeg_data.csv
             data/splits/
-

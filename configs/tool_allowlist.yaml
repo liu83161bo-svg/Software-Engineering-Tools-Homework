@@ -1,0 +1,41 @@
+# Tool Allowlist & Parameter Validation Rules
+version: "1.0"
+
+tools:
+  - name: "classify_eeg"
+    description: "Classify EEG signal into age category"
+    permission_level: "read"
+    require_confirmation: false
+    max_calls_per_session: 100
+    timeout_seconds: 10
+    parameter_schema:
+      type: object
+      properties:
+        signal:
+          type: array
+          items:
+            type: number
+          minItems: 1000
+          maxItems: 1000
+          description: "EEG signal array of exactly 1000 float values"
+      required:
+        - signal
+      additionalProperties: false
+
+  - name: "get_patient_metadata"
+    description: "Retrieve patient metadata by ID (e.g., age, sex, recording date)"
+    permission_level: "write"
+    require_confirmation: true
+    allowed_roles: ["clinician", "researcher_irb_approved"]
+    max_calls_per_session: 20
+    timeout_seconds: 5
+    parameter_schema:
+      type: object
+      properties:
+        patient_id:
+          type: string
+          pattern: "^[A-Za-z0-9_]{3,16}$"
+          description: "Alphanumeric patient ID, 3-16 characters"
+      required:
+        - patient_id
+      additionalProperties: false
