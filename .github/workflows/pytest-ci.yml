@@ -73,7 +73,7 @@ jobs:
       # ===== Session 7: Safety Tests =====
       # Step 11: Secret Scanning with gitleaks
       - name: Run gitleaks (Secret Scanning)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
